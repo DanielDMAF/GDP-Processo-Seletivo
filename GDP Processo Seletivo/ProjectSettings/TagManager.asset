@@ -5,6 +5,10 @@ TagManager:
   serializedVersion: 2
   tags:
   - Chao
+  - Damage
+  - Inimigo
+  - Player Damage
+  - Vida
   layers:
   - Default
   - TransparentFX
@@ -12,11 +16,11 @@ TagManager:
   - Chao
   - Water
   - UI
-  - 
-  - 
-  - 
-  - 
-  - 
+  - Player
+  - Player Bullet
+  - Inimigo
+  - Inimigo Damage
+  - Coletavel
   - 
   - 
   - 

@@ -9,9 +9,10 @@ public class playerMovimento : MonoBehaviour
     [SerializeField] Rigidbody2D rb;
     [SerializeField] LayerMask chaoLayer;
     [SerializeField] Transform chaoCheck;
-
+    [SerializeField] SpriteRenderer sprite;
     private Animator anim;
 
+    //mov horiizontal
     private bool facingRight = true;
     public float vel_Mov;
     private float mov_hor = 0;
@@ -21,13 +22,29 @@ public class playerMovimento : MonoBehaviour
     private float coyoteDelay = 0.2f; //Coyote time pulo
     private float coyoteTimer;
 
-    private float mov_vert = 0;
+    //private float mov_vert = 0;
     private bool crouch;
     private bool lookUp;
 
-    private bool reload;
+    //Reload/slash:
+    private bool slash;
+    public GameObject slashPrefab;
+    public Transform slashSpawn;
+    private float slashCooldown = 0.3f;
+    private float nextSlash;
 
-    
+    //Fire:
+    public static int ammoMax;
+    public static int ammo;
+    public GameObject bulletPrefab;
+    public Transform bulletSpawn;
+    public Transform bulletSpawnDown;
+    private float fireRate = 0.5f;
+    private float nextFire;
+
+    //Vida:
+    public static int vida;
+    public static int vidaMax;
 
 
 
@@ -36,12 +53,19 @@ public class playerMovimento : MonoBehaviour
     {
         rb = GetComponent<Rigidbody2D>();
         anim = GetComponent<Animator>();
+        sprite = GetComponent<SpriteRenderer>();
+
+        nextFire = 0;
+        nextSlash = 0;
+        ammo = 5;
+        ammoMax = 5;
+        vidaMax = 10;
+        vida = 10;
     }
 
     
     void Update()
     {
-        
         //Parte Pulo:
         if (NoChao())
         {
@@ -51,9 +75,9 @@ public class playerMovimento : MonoBehaviour
         }
         else
         {
-            coyoteTimer -= Time.deltaTime;
+            coyoteTimer -= Time.deltaTime; //Utiliza coyote time
         }
-        if ((Input.GetButtonDown("Jump") && coyoteTimer > 0) && (!lookUp && !crouch && !reload)) //pula com a adiçao dp coyote timer
+        if ((Input.GetButtonDown("Jump") && coyoteTimer > 0) && (!lookUp && !crouch && !slash)) //pula com a adiçao dp coyote timer
         {
             rb.velocity = new Vector2(rb.velocity.x, forca_pulo);
             Jumping = true;
@@ -65,24 +89,25 @@ public class playerMovimento : MonoBehaviour
         }
 
         //Tiro parte:
-        if (Input.GetKeyDown(KeyCode.Z)) 
+        if (Input.GetKeyDown(KeyCode.Z) && (Time.time > nextFire) && ammo>0)
         {
-
-            anim.SetTrigger("Shoot"); //Animation
+            nextFire = Time.time + fireRate;
+            Fire();
         }
 
         //Reload//Slash parte
-        if (Input.GetKeyDown(KeyCode.X))
+        if (Input.GetKeyDown(KeyCode.X) && Time.time > nextSlash)
         {
+            nextSlash = Time.time + slashCooldown;
             Slash();
         }
 
-        //Input Horizontais:
+        //Input Verticais:
         lookUp = Input.GetKey(KeyCode.UpArrow);
         crouch = Input.GetKey(KeyCode.DownArrow);
 
         //Parte pegar input dos movimentos horizontais
-        if (!lookUp && !crouch && !reload)
+        if (!lookUp && !crouch && !slash)
         {
             mov_hor = Input.GetAxis("Horizontal");
         }
@@ -113,7 +138,28 @@ public class playerMovimento : MonoBehaviour
         }
     }
 
+    //Colisao controle:
+    private void OnCollisionEnter2D(Collision2D collision)
+    {
+        if (collision.gameObject.CompareTag("Inimigo"))
+        {
+            StartCoroutine(LevouDano());
+        }
+        if (collision.gameObject.CompareTag("Vida"))
+        {
+            vida = vidaMax;
+        }
 
+
+    }
+
+    IEnumerator LevouDano()
+    {
+        vida -= 1;
+        sprite.color = Color.red;
+        yield return new WaitForSeconds(0.1f);
+        sprite.color = Color.white;
+    }
     private bool NoChao()
     {
         return Physics2D.OverlapCircle(chaoCheck.position, 0.2f, chaoLayer);
@@ -127,6 +173,34 @@ public class playerMovimento : MonoBehaviour
     }
     private void Slash()
     {
-        //anim.SetBool("Reload", true);
+        anim.SetTrigger("Reload"); //Animation
+        GameObject tempSlash = Instantiate(slashPrefab, slashSpawn.position, slashSpawn.rotation);
+        if (!facingRight)
+        {
+            tempSlash.transform.eulerAngles = new Vector3(0, 180, 0);
+        }
+    }
+
+    private void Fire()
+    {
+        anim.SetTrigger("Shoot"); //Animation
+        ammo -= 1;
+        if (crouch && !NoChao())
+        {
+            GameObject tempBullet = Instantiate(bulletPrefab, bulletSpawnDown.position, bulletSpawnDown.rotation);
+            tempBullet.transform.eulerAngles = new Vector3(0, 0, -90);
+        }
+        else
+        {
+            GameObject tempBullet = Instantiate(bulletPrefab, bulletSpawn.position, bulletSpawn.rotation);
+            if (!facingRight && lookUp && NoChao())
+            {
+                tempBullet.transform.eulerAngles = new Vector3(0, 0, 90);
+            }
+            else if (!facingRight)
+            {
+                tempBullet.transform.eulerAngles = new Vector3(0, 0, 180);
+            }
+        }
     }
 }
